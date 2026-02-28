@@ -9,13 +9,7 @@ app.get("/", (req, res) => res.status(200).send("Bot is running ✅"));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`HTTP server listening on ${PORT}`));
 
-const {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  EmbedBuilder,
-} = require("discord.js");
-
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require("discord.js");
 const { translate } = require("@vitalets/google-translate-api");
 
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -34,6 +28,12 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+
+  // ✅ AUCUNE mention / AUCUN ping (users, roles, @everyone, @here) + pas de ping du replied user
+  allowedMentions: {
+    parse: [],
+    repliedUser: false,
+  },
 });
 
 client.once("ready", () => {
@@ -54,30 +54,41 @@ client.on("messageReactionAdd", async (reaction, user) => {
     if (!text) return;
 
     if (text.length > 1500) {
-      await msg.reply("⚠️ Message too long to translate.");
+      await msg.reply({
+        content: "⚠️ Message too long to translate.",
+        allowedMentions: { parse: [], repliedUser: false },
+      });
       return;
     }
 
     let translated;
 
     try {
+      // ✅ traduction
       const res = await translate(text, { to: "ar" });
       translated = res.text;
+
+      // ✅ Anti-mention même visuellement (neutralise les @)
+      translated = translated.replaceAll("@", "@\u200b");
     } catch (err) {
       console.error("Translation error:", err);
-      await msg.reply("⚠️ Translation failed.");
+      await msg.reply({
+        content: "⚠️ Translation failed.",
+        allowedMentions: { parse: [], repliedUser: false },
+      });
       return;
     }
 
     const embed = new EmbedBuilder()
       .setColor("#2ecc71")
       .setTitle("🇸🇦 Arabic Translation")
-      .setDescription(
-        translated.length > 4000 ? translated.slice(0, 4000) : translated
-      )
+      .setDescription(translated.length > 4000 ? translated.slice(0, 4000) : translated)
       .setFooter({ text: `Requested by ${user.tag}` });
 
-    const sent = await msg.reply({ embeds: [embed] });
+    const sent = await msg.reply({
+      embeds: [embed],
+      allowedMentions: { parse: [], repliedUser: false },
+    });
 
     // Supprime la réponse après 2 minutes
     setTimeout(() => {
