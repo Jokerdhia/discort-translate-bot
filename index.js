@@ -99,4 +99,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
   }
 });
 
-client.login(TOKEN);
+console.log("🔑 Attempting Discord login...");
+client.login(TOKEN)
+  .then(() => console.log("✅ Discord login success"))
+  .catch((err) => console.error("❌ Discord login failed:", err));
